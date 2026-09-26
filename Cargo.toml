@@ -1,0 +1,15 @@
+[package]
+name = "task-tracker-rust"
+version = "0.1.0"
+edition = "2024"
+authors = ["Gabriel Souza"]
+description = "A small cli based task-tracker built for learning purposes"
+license = "MIT"
+repository = "https://github.com/gabrielluciano/task-tracker-rust"
+
+[[bin]]
+name = "task-tracker"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
