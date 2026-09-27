@@ -26,8 +26,8 @@ impl TaskDatabase for MemoryDb {
         Ok(clone)
     }
 
-    fn list(&self) -> Result<&[Task], TaskError> {
-        Ok(&self.tasks) // Again no error possible in the MemoryDb
+    fn list(&self) -> Result<Vec<Task>, TaskError> {
+        Ok(self.tasks.clone()) // Again no error possible in the MemoryDb
     }
 
     fn done(&mut self, id: u32) -> Result<(), TaskError> {

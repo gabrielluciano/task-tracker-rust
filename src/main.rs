@@ -62,27 +62,11 @@ fn remove_handler(db: &mut impl TaskDatabase, id: u32) -> Result<(), TaskError> 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
-    let mut db = task::memory_db::MemoryDb::new();
+    // let mut db = task::memory_db::MemoryDb::new();
+    let mut db = task::file_db::FileDb::new();
 
-    // Since this is in memory we need to do everything in single pass :(
-    // so we manually call the handlers to test the behavior
-    // Use task-tracker list to see results from below tests
-
-    add_handler(&mut db, "Task 1")?;
-    add_handler(&mut db, "Task 2")?;
-    add_handler(&mut db, "Task 3")?;
-    done_handler(&mut db, 2)?;
-    add_handler(&mut db, "Task 4")?;
-    remove_handler(&mut db, 1)?;
-    remove_handler(&mut db, 4)?;
-
-    // Error scenarios - first error will crash the program
-
-    // uncomment other scenarios and comment the previous to test
-    add_handler(&mut db, "")?; // Empty title
-    // remove_handler(&mut db, 10)?; // Task doesn't exist
-    // done_handler(&mut db, 2)?; // Already done
-    // done_handler(&mut db, 10)?; // Task doesn't exist
+    // Use this when testing the MemoryDb implementation
+    // test_memory_db(&mut db)?;
 
     match &cli.command {
         Commands::Add { title } => {
@@ -101,5 +85,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             remove_handler(&mut db, *id)?;
         }
     }
+    Ok(())
+}
+
+fn test_memory_db(db: &mut impl TaskDatabase) -> Result<(), TaskError> {
+    // Since this is in memory we need to do everything in single pass :(
+    // so we manually call the handlers to test the behavior
+    // Use task-tracker list to see results from below tests
+
+    add_handler(db, "Task 1")?;
+    add_handler(db, "Task 2")?;
+    add_handler(db, "Task 3")?;
+    list_handler(db)?;
+    done_handler(db, 2)?;
+    add_handler(db, "Task 4")?;
+    remove_handler(db, 1)?;
+    remove_handler(db, 4)?;
+
+    // Error scenarios - first error will crash the program
+
+    // uncomment other scenarios and comment the previous to test
+    add_handler(db, "")?; // Empty title
+    // remove_handler(db, 10)?; // Task doesn't exist
+    // done_handler(db, 2)?; // Already done
+    // done_handler(db, 10)?; // Task doesn't exist
     Ok(())
 }

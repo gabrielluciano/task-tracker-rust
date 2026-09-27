@@ -1,7 +1,10 @@
 use std::{error::Error, fmt::Display};
 
+use serde::{Deserialize, Serialize};
+
 use crate::task::TaskErrorCode::BadInput;
 
+pub mod file_db;
 pub mod memory_db;
 
 #[derive(Debug)]
@@ -9,6 +12,7 @@ pub enum TaskErrorCode {
     BadInput,
     TaskDoesNotExist,
     TaskAlreadyDone,
+    Generic,
 }
 
 #[derive(Debug)]
@@ -17,7 +21,7 @@ pub struct TaskError {
     message: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Task {
     id: u32,
     title: String,
@@ -58,6 +62,7 @@ impl Task {
 impl Display for TaskErrorCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Generic => write!(f, "Generic"),
             Self::BadInput => write!(f, "BadInput"),
             Self::TaskDoesNotExist => write!(f, "TaskDoesNotExist"),
             Self::TaskAlreadyDone => write!(f, "TaskAlreadyDone"),
@@ -85,7 +90,7 @@ impl Error for TaskError {}
 pub trait TaskDatabase {
     fn new() -> Self;
     fn add(&mut self, title: &str) -> Result<Task, TaskError>;
-    fn list(&self) -> Result<&[Task], TaskError>;
+    fn list(&self) -> Result<Vec<Task>, TaskError>;
     fn done(&mut self, id: u32) -> Result<(), TaskError>;
     fn remove(&mut self, id: u32) -> Result<(), TaskError>;
 }
