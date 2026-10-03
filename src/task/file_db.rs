@@ -2,7 +2,6 @@ use std::fs;
 
 use super::Task;
 use super::TaskError;
-use super::TaskErrorCode::TaskAlreadyDone;
 use super::TaskErrorCode::TaskDoesNotExist;
 use crate::task::TaskDatabase;
 use crate::task::TaskErrorCode::Generic;
@@ -25,25 +24,32 @@ fn write_tasks(tasks: &[Task]) -> Result<(), Box<dyn std::error::Error>> {
     Ok(fs::write(FILENAME, serde_json::to_string(tasks)?)?)
 }
 
+fn with_tasks<T>(handler: impl Fn(&mut Vec<Task>) -> Result<T, TaskError>) -> Result<T, TaskError> {
+    match get_tasks() {
+        Ok(mut tasks) => {
+            let result = handler(&mut tasks)?;
+            match write_tasks(&tasks) {
+                Ok(_) => Ok(result),
+                Err(e) => Err(TaskError::err(Generic, &e.to_string())),
+            }
+        }
+        Err(e) => Err(TaskError::err(Generic, &e.to_string())),
+    }
+}
+
 impl TaskDatabase for FileDb {
     fn new() -> Self {
         FileDb {}
     }
 
     fn add(&mut self, title: &str) -> Result<Task, TaskError> {
-        match get_tasks() {
-            Ok(mut tasks) => {
-                let last_id = tasks.iter().map(|t| t.id()).max().unwrap_or(0);
-                let id = last_id + 1;
-                let task = Task::new(id, title)?;
-                tasks.push(task.clone());
-                match write_tasks(&tasks) {
-                    Ok(_) => Ok(task),
-                    Err(e) => Err(TaskError::err(Generic, &e.to_string())),
-                }
-            }
-            Err(e) => Err(TaskError::err(Generic, &e.to_string())),
-        }
+        with_tasks(|tasks| {
+            let last_id = tasks.iter().map(|t| t.id()).max().unwrap_or(0);
+            let id = last_id + 1;
+            let task = Task::new(id, title)?;
+            tasks.push(task.clone());
+            Ok(task)
+        })
     }
 
     fn list(&self) -> Result<Vec<Task>, TaskError> {
@@ -54,42 +60,26 @@ impl TaskDatabase for FileDb {
     }
 
     fn done(&mut self, id: u32) -> Result<(), TaskError> {
-        match get_tasks() {
-            Ok(mut tasks) => {
-                let task_opt = tasks.iter_mut().find(|task| task.id() == id);
-                if let Some(task) = task_opt {
-                    let result = task.mark_done();
-                    if !result {
-                        Err(TaskError::err(TaskAlreadyDone, "the task was already done"))
-                    } else {
-                        match write_tasks(&tasks) {
-                            Ok(_) => Ok(()),
-                            Err(e) => Err(TaskError::err(Generic, &e.to_string())),
-                        }
-                    }
-                } else {
-                    Err(TaskError::err(TaskDoesNotExist, "the task was not found"))
-                }
+        with_tasks(|tasks| {
+            let task_opt = tasks.iter_mut().find(|task| task.id() == id);
+            if let Some(task) = task_opt {
+                task.mark_done()?;
+                Ok(())
+            } else {
+                Err(TaskError::err(TaskDoesNotExist, "the task was not found"))
             }
-            Err(e) => Err(TaskError::err(Generic, &e.to_string())),
-        }
+        })
     }
 
     fn remove(&mut self, id: u32) -> Result<(), TaskError> {
-        match get_tasks() {
-            Ok(mut tasks) => {
-                let index_opt = tasks.iter().position(|task| task.id() == id);
-                if let Some(index) = index_opt {
-                    tasks.remove(index);
-                    match write_tasks(&tasks) {
-                        Ok(_) => Ok(()),
-                        Err(e) => Err(TaskError::err(Generic, &e.to_string())),
-                    }
-                } else {
-                    Err(TaskError::err(TaskDoesNotExist, "the task was not found"))
-                }
+        with_tasks(|tasks| {
+            let index_opt = tasks.iter().position(|task| task.id() == id);
+            if let Some(index) = index_opt {
+                tasks.remove(index);
+                Ok(())
+            } else {
+                Err(TaskError::err(TaskDoesNotExist, "the task was not found"))
             }
-            Err(e) => Err(TaskError::err(Generic, &e.to_string())),
-        }
+        })
     }
 }

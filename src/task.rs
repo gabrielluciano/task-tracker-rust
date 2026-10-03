@@ -2,7 +2,7 @@ use std::{error::Error, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
-use crate::task::TaskErrorCode::BadInput;
+use crate::task::TaskErrorCode::{BadInput, TaskAlreadyDone};
 
 pub mod file_db;
 pub mod memory_db;
@@ -52,10 +52,12 @@ impl Task {
         self.done
     }
 
-    fn mark_done(&mut self) -> bool {
-        let was = self.done;
+    fn mark_done(&mut self) -> Result<(), TaskError> {
+        if self.done {
+            return Err(TaskError::err(TaskAlreadyDone, "the task was already done"));
+        }
         self.done = true;
-        !was
+        Ok(())
     }
 }
 

@@ -2,7 +2,6 @@ use crate::task::TaskDatabase;
 
 use super::Task;
 use super::TaskError;
-use super::TaskErrorCode::TaskAlreadyDone;
 use super::TaskErrorCode::TaskDoesNotExist;
 
 pub struct MemoryDb {
@@ -33,12 +32,7 @@ impl TaskDatabase for MemoryDb {
     fn done(&mut self, id: u32) -> Result<(), TaskError> {
         let task_opt = self.tasks.iter_mut().find(|task| task.id() == id);
         if let Some(task) = task_opt {
-            let result = task.mark_done();
-            if !result {
-                Err(TaskError::err(TaskAlreadyDone, "the task was already done"))
-            } else {
-                Ok(())
-            }
+            Ok(task.mark_done()?)
         } else {
             Err(TaskError::err(TaskDoesNotExist, "the task was not found"))
         }
